@@ -1,0 +1,20 @@
+﻿<#@ assembly name="EnvDTE" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="EnvDTE" #>
+<#+
+    public static class AttributeValueExtractor
+    {
+        public static string GetAttributeSingleStringParameterValueOrNull(CodeAttribute attribute)
+        {
+            if (string.IsNullOrWhiteSpace(attribute.Value))
+                return null;
+
+            return attribute.Value.Trim('"');            
+        }
+
+        public static string GetAttributeSingleStringParameterValue(CodeAttribute attribute)
+        {
+            return attribute.Value.Trim('"');            
+        }
+    }
+#>

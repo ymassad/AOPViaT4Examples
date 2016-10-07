@@ -1,0 +1,194 @@
+﻿<#@ assembly name="EnvDTE" #>
+<#@ assembly name="EnvDTE80" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="EnvDTE" #>
+<#@ import namespace="EnvDTE80" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Linq" #>
+<#@ include once="true" file="LoggingAspect.Core.tt"#><##>
+<#@ include once="true" file="Utilities\MethodParametersGenerator.tt"#><##>
+<#@ include once="true" file="Utilities\MethodMatcher.tt"#><##>
+<#+
+    public void GenerateLoggingDecoratorForClass(
+        CodeClass2 @class,
+        CodeInterface @interface,
+        IPreInvocationLoggingDataCodeGenerator preInvocationLoggingDataCodeExtractor,
+        IPostInvocationLoggingDataCodeGenerator postInvocationLoggingDataCodeExtractor)
+    {
+
+        string className = @class.Name;
+        string fullClassName = @class.FullName;
+        string fullInterfaceName = @interface.FullName;
+
+        string decoratorClassName = className + "LoggingDecorator";
+
+        var @namespace = @class.Namespace.FullName;
+
+#>
+
+namespace <#= @namespace #>
+{
+    using System;
+    using Logging;
+    using System.Linq;
+
+    public class <#=decoratorClassName#> : <#=fullInterfaceName#>
+    {
+        private readonly <#=fullClassName#> decorated;
+        private readonly ILogger logger;
+        private readonly LoggingData[] constantLoggingData;
+
+        public <#=decoratorClassName#>(<#=fullClassName#> decorated, ILogger logger, params LoggingData[] constantLoggingData)
+        {
+            this.decorated = decorated;
+            this.logger = logger;
+            this.constantLoggingData = constantLoggingData;
+        }
+
+        <#+
+        PushIndent(new string(' ', 8));
+        GenerateMethodsForClass(@class, @interface, preInvocationLoggingDataCodeExtractor, postInvocationLoggingDataCodeExtractor);
+        PopIndent();
+        #>
+    }
+
+    public static class <#=className#>ExtensionMethodsForLoggingAspect
+    {
+        public static <#=fullInterfaceName#> AsLoggable(this <#=fullClassName#> instance, ILogger logger, params LoggingData[] constantLoggingData)
+        {
+            return new <#=decoratorClassName#>(instance, logger, constantLoggingData);
+        }
+    }
+}
+<#+
+    }
+
+    public void GenerateMethodsForClass(
+        CodeClass2 @class,
+        CodeInterface @interface,
+        IPreInvocationLoggingDataCodeGenerator preInvocationLoggingDataCodeExtractor,
+        IPostInvocationLoggingDataCodeGenerator postInvocationLoggingDataCodeExtractor)
+    {
+
+
+        foreach (CodeFunction interfaceMethod in @interface.Members.OfType<CodeFunction>())
+        {
+
+            string methodReturnType =
+                interfaceMethod.Type.TypeKind == vsCMTypeRef.vsCMTypeRefVoid
+                    ? "void"
+                    : interfaceMethod.Type.AsFullName;
+
+            string methodName = interfaceMethod.Name;
+            bool isVoid = interfaceMethod.Type.TypeKind == vsCMTypeRef.vsCMTypeRefVoid;
+
+            var classMethod = MethodMatcher.GetClassMethodFromInterfaceMethod(interfaceMethod, @class);
+
+    
+            var preInvocationLoggingDataCodeList = preInvocationLoggingDataCodeExtractor.Extract(classMethod);
+
+            var postInvocationLoggingDataCodeList = postInvocationLoggingDataCodeExtractor.Extract(classMethod, "returnValue");
+
+#>
+public <#=methodReturnType#> <#=methodName#>(<#=MethodParameterGenerator.GenerateMethodParametersWithTypes(classMethod)#>)
+{
+    var preInvocationLoggingData =
+            new LoggingData[]
+            {
+<#+
+            foreach (var loggingDataCode in preInvocationLoggingDataCodeList)
+            {
+                PushIndent(new string(' ', 8));
+                RenderLoggingDataCode(loggingDataCode);
+                PopIndent();
+            }
+#>
+            }
+            .Concat(constantLoggingData)
+            .ToArray();
+
+<#+
+    if (!isVoid)
+    {
+#>
+    <#=methodReturnType#> returnValue;
+
+<#+
+    }
+#>
+    try
+    {
+<#+
+        if (isVoid)
+        {
+#>
+        decorated.<#=methodName #>(<#=MethodParameterGenerator.GenerateMethodParametersWithoutTypes(classMethod) #>);
+<#+
+        }
+        else
+        {
+#>
+        returnValue = decorated.<#=methodName #>(<#=MethodParameterGenerator.GenerateMethodParametersWithoutTypes(classMethod) #>);	
+<#+
+        }
+#>
+    }
+    catch(Exception ex)
+    {
+        logger.LogError(preInvocationLoggingData, ex);
+        throw;
+    }
+<#+
+    if (!isVoid)
+    {
+        if (postInvocationLoggingDataCodeList.Length > 0)
+        {
+#>
+
+    var returnValueLoggingData = new LoggingData[]
+    {
+<#+
+            foreach (var loggingDataCode in postInvocationLoggingDataCodeList)
+            {
+                RenderLoggingDataCode(loggingDataCode);
+            }
+#>
+    };
+
+    logger.LogSuccess(preInvocationLoggingData.Concat(returnValueLoggingData).ToArray());
+<#+
+        }
+        else
+        {
+#>
+
+    logger.LogSuccess(preInvocationLoggingData);
+<#+
+        }
+#>
+
+    return returnValue;
+<#+
+    }
+	else
+	{
+#>
+
+	logger.LogSuccess(preInvocationLoggingData);
+<#+
+    }
+#>
+
+}
+
+<#+
+        }
+    }
+
+    public void RenderLoggingDataCode(LoggingDataCode loggingDataCode)
+    {
+#>
+        new LoggingData{ Name = <#=loggingDataCode.NameCode#>, Value = <#=loggingDataCode.ValueCode#>},
+<#+
+    }
+#>

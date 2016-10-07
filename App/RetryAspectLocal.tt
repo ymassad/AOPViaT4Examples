@@ -1,0 +1,17 @@
+﻿<#@ template debug="false" hostspecific="true" language="C#" #>
+<#@ assembly name="EnvDTE" #>
+<#@ import namespace="EnvDTE" #>
+<#@include once="true" file="$(SolutionDir)T4Aspects\RetryAspect.tt"#><##>
+<#@include once="true" file="$(SolutionDir)T4Aspects\Utilities\InterfaceFinder.tt"#><##>
+<#@ output extension="cs"#>
+<#
+    var hostServiceProvider = (IServiceProvider) Host;
+    var dte = (DTE) hostServiceProvider.GetService(typeof(DTE));
+
+    var interfaces = InterfaceFinder.FindInterfacesInSolution(dte, new[] {"IDocumentSource"});
+
+    foreach (var @interface in interfaces)
+    {
+        GenerateRetryDecoratorForInterface(@interface);        
+    }
+#>

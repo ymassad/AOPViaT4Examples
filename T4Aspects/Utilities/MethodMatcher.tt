@@ -1,0 +1,26 @@
+﻿<#@ assembly name="EnvDTE" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="EnvDTE" #>
+<#+
+    public static class MethodMatcher
+    {
+        public static CodeFunction GetClassMethodFromInterfaceMethod(CodeFunction interfaceMethod, CodeClass @class)
+        {
+            var interfaceMethodSignature = GetMethodSignature(interfaceMethod);
+
+            return @class.Members.OfType<CodeFunction>().Single(x => GetMethodSignature(x) == interfaceMethodSignature);
+        }
+
+        private static string GetMethodSignature(CodeFunction classMethod)
+        {
+            var value =
+                vsCMPrototype.vsCMPrototypeParamDefaultValues |
+                vsCMPrototype.vsCMPrototypeParamNames |
+                vsCMPrototype.vsCMPrototypeParamTypes |
+                vsCMPrototype.vsCMPrototypeType;
+
+            return classMethod.Prototype[(int) value];
+        }
+    }
+#>

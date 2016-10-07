@@ -1,0 +1,99 @@
+﻿<#@ assembly name="EnvDTE" #>
+<#@ assembly name="EnvDTE80" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="EnvDTE" #>
+<#@ import namespace="EnvDTE80" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.Linq" #>
+<#+
+    public static class ClassFinder
+    {
+        public static CodeClass2[] FindClassesInSolution(DTE dte, string[] names)
+        {
+            List<CodeClass2> list = new List<CodeClass2>();
+
+            foreach (Project project in dte.Solution.Projects)
+            {
+                CodeClass2[] result = FindClassesInProject(project, names);
+
+                list.AddRange(result);
+            }
+
+            return list.ToArray();
+        }
+
+        private static CodeClass2[] FindClassesInProject(Project project, string[] names)
+        {
+            List<CodeClass2> list = new List<CodeClass2>();
+
+            if (project.Kind == ProjectKinds.vsProjectKindSolutionFolder)
+            {
+
+                foreach (ProjectItem projectItem in project.ProjectItems)
+                {
+                    if(projectItem.SubProject != null)
+                        list.AddRange(FindClassesInProject(projectItem.SubProject, names));
+                }
+
+                return list.ToArray();
+            }
+
+            foreach (ProjectItem projectItem in project.ProjectItems)
+            {
+                CodeClass2[] result = FindClassInProjectItem(projectItem, names);
+
+                list.AddRange(result);
+            }
+
+            return list.ToArray();
+        }
+
+        private static CodeClass2[] FindClassInProjectItem(ProjectItem projectItem, string[] names)
+        {
+            List<CodeClass2> list = new List<CodeClass2>();
+
+            if (projectItem.ProjectItems != null)
+            {
+                foreach (ProjectItem subprojectItem in  projectItem.ProjectItems)
+                {
+                    CodeClass2[] subResult = FindClassInProjectItem(subprojectItem, names);
+
+                    list.AddRange(subResult);
+                }                
+            }
+
+            if (projectItem.FileCodeModel == null)
+                return list.ToArray();
+
+            CodeClass2[] result = FindClass(projectItem.FileCodeModel.CodeElements, names);
+
+            list.AddRange(result);
+
+            return list.ToArray();
+        }
+
+        private static CodeClass2[] FindClass(CodeElements elements, string[] names)
+        {
+            List<CodeClass2> list = new List<CodeClass2>();
+
+            foreach (CodeElement element in elements)
+            {
+                if (element.Kind == vsCMElement.vsCMElementClass)
+                {
+                    if (names.Contains(element.Name))
+                        list.Add((CodeClass2)element);
+                }
+                else if (element.Kind == vsCMElement.vsCMElementNamespace)
+                {
+                    var codeNamespace = (CodeNamespace) element;
+
+                    CodeClass2[] result = FindClass(codeNamespace.Members, names);
+
+                    list.AddRange(result);
+                }
+            }
+
+            return list.ToArray();
+        }        
+    }
+#>

@@ -1,0 +1,44 @@
+﻿<#@ assembly name="EnvDTE" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="EnvDTE" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Linq" #>
+<#+
+    public static class MethodParameterGenerator
+    {
+        public static string GenerateMethodParametersWithTypes(CodeFunction method)
+        {
+            return GenerateMethodParametersWithTypes(method, includeTypes: true);
+        }
+
+        public static string GenerateMethodParametersWithoutTypes(CodeFunction method)
+        {
+            return GenerateMethodParametersWithTypes(method, includeTypes: false);
+        }
+
+        private static string GenerateMethodParametersWithTypes(CodeFunction method, bool includeTypes)
+        {
+            var parameters = method.Parameters;
+
+            StringBuilder sb = new StringBuilder();
+
+            for(int i = 1 ; i <= parameters.Count  ; i++)
+            {
+                var param = (CodeParameter) parameters.Item(i);
+
+                if(i != 1)
+                    sb.Append(", ");
+
+                if (includeTypes)
+                {
+                    sb.Append(param.Type.AsFullName);
+                    sb.Append(" ");                
+                }
+
+                sb.Append(param.Name);
+            }
+
+            return sb.ToString();
+        }
+    }
+#>

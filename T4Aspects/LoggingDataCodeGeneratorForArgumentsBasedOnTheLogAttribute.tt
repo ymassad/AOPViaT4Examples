@@ -1,0 +1,43 @@
+﻿<#@ assembly name="EnvDTE" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="EnvDTE" #>
+<#@ include once="true" file="LoggingAspect.Core.tt"#><##>
+<#@ include once="true" file="Utilities\AttributeValueExtractor.tt"#><##>
+<#+
+    public class LoggingDataCodeGeneratorForArgumentsBasedOnTheLogAttribute : IPreInvocationLoggingDataCodeGenerator
+    {
+        public LoggingDataCode[] Extract(CodeFunction method)
+        {
+            List<LoggingDataCode> loggingDataCodeList = new List<LoggingDataCode>();
+
+            foreach (CodeParameter parameter in method.Parameters)
+            {
+                var attributes =
+                    parameter.Attributes
+                        .Cast<CodeAttribute>()
+                        .Where(x => x.FullName == "LoggingAOP.LogAttribute")
+                        .ToList();
+                
+                foreach (var attribute in attributes)
+                {
+                    var valueCode =
+                        parameter.Type.TypeKind == vsCMTypeRef.vsCMTypeRefString
+                            ? parameter.Name
+                            : parameter.Name + ".ToString()";
+
+                    var nameCode = "\"" + (AttributeValueExtractor.GetAttributeSingleStringParameterValueOrNull(attribute) ?? parameter.Name) +"\"";
+
+                    loggingDataCodeList
+                        .Add(
+                            new LoggingDataCode(
+                                nameCode,
+                                valueCode));
+                }
+            }
+
+            return loggingDataCodeList.ToArray();
+        }
+    }
+#>

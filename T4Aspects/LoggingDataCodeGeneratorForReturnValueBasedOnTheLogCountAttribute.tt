@@ -1,0 +1,45 @@
+﻿<#@ assembly name="EnvDTE" #>
+<#@ assembly name="EnvDTE80" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="EnvDTE" #>
+<#@ import namespace="EnvDTE80" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.Linq" #>
+<#@ include once="true" file="LoggingAspect.Core.tt"#><##>
+<#@ include once="true" file="Utilities\AttributeValueExtractor.tt"#><##>
+<#+
+    public class LoggingDataCodeGeneratorForReturnValueBasedOnTheLogCountAttribute : IPostInvocationLoggingDataCodeGenerator
+    {
+        public LoggingDataCode[] Extract(CodeFunction method, string returnValueVariableName)
+        {
+            List<LoggingDataCode> loggingDataCodeList = new List<LoggingDataCode>();
+
+            if(method.Type.TypeKind == vsCMTypeRef.vsCMTypeRefVoid)
+                return new LoggingDataCode[]{};
+            
+            var attributes =
+                method.Attributes
+                    .Cast<CodeAttribute2>()
+                    .Where(x => x.Target == "return" && x.FullName == "LoggingAOP.LogCountAttribute")
+                    .ToList();
+
+            foreach (var attribute in attributes)
+            {
+                var valueCode =
+                    method.Type.TypeKind.HasFlag(vsCMTypeRef.vsCMTypeRefArray)
+                        ? "returnValue.Length.ToString()"
+                        : "returnValue.Count.ToString()";
+
+                var nameCode = "\"" + (AttributeValueExtractor.GetAttributeSingleStringParameterValueOrNull(attribute) ?? "Return Value") + "\"";
+
+                loggingDataCodeList
+                    .Add(
+                        new LoggingDataCode(
+                            nameCode,
+                            valueCode));
+            }
+
+            return loggingDataCodeList.ToArray();
+        }
+    }
+#>

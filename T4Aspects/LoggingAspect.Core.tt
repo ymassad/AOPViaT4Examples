@@ -1,0 +1,28 @@
+﻿<#@ assembly name="EnvDTE" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="EnvDTE" #>
+<#@ import namespace="System.Linq" #>
+<#+
+    public class LoggingDataCode
+    {
+        public LoggingDataCode(string nameCode, string valueCode)
+        {
+            NameCode = nameCode;
+            ValueCode = valueCode;
+        }
+
+        public string NameCode { get;private set; }
+
+        public string ValueCode { get; private set; }
+    }
+
+    public interface IPreInvocationLoggingDataCodeGenerator
+    {
+        LoggingDataCode[] Extract(CodeFunction method);
+    }
+
+    public interface IPostInvocationLoggingDataCodeGenerator
+    {
+        LoggingDataCode[] Extract(CodeFunction method, string returnValueVariableName);
+    }
+#>

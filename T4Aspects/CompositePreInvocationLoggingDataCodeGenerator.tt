@@ -1,0 +1,21 @@
+﻿<#@ assembly name="EnvDTE" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="EnvDTE" #>
+<#@ import namespace="System.Linq" #>
+<#@ include once="true" file="LoggingAspect.Core.tt"#><##>
+<#+
+    public class CompositePreInvocationLoggingDataCodeGenerator : IPreInvocationLoggingDataCodeGenerator
+    {
+        private readonly IPreInvocationLoggingDataCodeGenerator[] generators;
+
+        public CompositePreInvocationLoggingDataCodeGenerator(params IPreInvocationLoggingDataCodeGenerator[] generators)
+        {
+            this.generators = generators;
+        }
+
+        public LoggingDataCode[] Extract(CodeFunction method)
+        {
+            return generators.SelectMany(x => x.Extract(method)).ToArray();
+        }
+    }
+#>

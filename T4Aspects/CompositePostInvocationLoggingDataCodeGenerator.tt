@@ -1,0 +1,21 @@
+﻿<#@ assembly name="EnvDTE" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="EnvDTE" #>
+<#@ import namespace="System.Linq" #>
+<#@ include once="true" file="LoggingAspect.Core.tt"#><##>
+<#+
+    public class CompositePostInvocationLoggingDataCodeGenerator : IPostInvocationLoggingDataCodeGenerator
+    {
+        private readonly IPostInvocationLoggingDataCodeGenerator[] generators;
+
+        public CompositePostInvocationLoggingDataCodeGenerator(params IPostInvocationLoggingDataCodeGenerator[] generators)
+        {
+            this.generators = generators;
+        }
+
+        public LoggingDataCode[] Extract(CodeFunction method, string returnValueVariableName)
+        {
+            return generators.SelectMany(x => x.Extract(method, returnValueVariableName)).ToArray();
+        }
+    }
+#>

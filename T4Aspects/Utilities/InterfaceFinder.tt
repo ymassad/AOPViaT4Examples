@@ -1,0 +1,99 @@
+﻿<#@ assembly name="EnvDTE" #>
+<#@ assembly name="EnvDTE80" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="EnvDTE" #>
+<#@ import namespace="EnvDTE80" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.Linq" #>
+<#+
+    public static class InterfaceFinder
+    {
+        public static CodeInterface2[] FindInterfacesInSolution(DTE dte, string[] names)
+        {
+            List<CodeInterface2> list = new List<CodeInterface2>();
+
+            foreach (Project project in dte.Solution.Projects)
+            {
+                CodeInterface2[] result = FindInterfacesInProject(project, names);
+
+                list.AddRange(result);
+            }
+
+            return list.ToArray();
+        }
+
+        private static CodeInterface2[] FindInterfacesInProject(Project project, string[] names)
+        {
+            List<CodeInterface2> list = new List<CodeInterface2>();
+
+            if (project.Kind == ProjectKinds.vsProjectKindSolutionFolder)
+            {
+
+                foreach (ProjectItem projectItem in project.ProjectItems)
+                {
+                    if(projectItem.SubProject != null)
+                        list.AddRange(FindInterfacesInProject(projectItem.SubProject, names));
+                }
+
+                return list.ToArray();
+            }
+
+            foreach (ProjectItem projectItem in project.ProjectItems)
+            {
+                CodeInterface2[] result = FindInterfaceInProjectItem(projectItem, names);
+
+                list.AddRange(result);
+            }
+
+            return list.ToArray();
+        }
+
+        private static CodeInterface2[] FindInterfaceInProjectItem(ProjectItem projectItem, string[] names)
+        {
+            List<CodeInterface2> list = new List<CodeInterface2>();
+
+            if (projectItem.ProjectItems != null)
+            {
+                foreach (ProjectItem subprojectItem in  projectItem.ProjectItems)
+                {
+                    CodeInterface2[] subResult = FindInterfaceInProjectItem(subprojectItem, names);
+
+                    list.AddRange(subResult);
+                }                
+            }
+
+            if (projectItem.FileCodeModel == null)
+                return list.ToArray();
+
+            CodeInterface2[] result = FindInterface(projectItem.FileCodeModel.CodeElements, names);
+
+            list.AddRange(result);
+
+            return list.ToArray();
+        }
+
+        private static CodeInterface2[] FindInterface(CodeElements elements, string[] names)
+        {
+            List<CodeInterface2> list = new List<CodeInterface2>();
+
+            foreach (CodeElement element in elements)
+            {
+                if (element.Kind == vsCMElement.vsCMElementInterface)
+                {
+                    if (names.Contains(element.Name))
+                        list.Add((CodeInterface2)element);
+                }
+                else if (element.Kind == vsCMElement.vsCMElementNamespace)
+                {
+                    var codeNamespace = (CodeNamespace) element;
+
+                    CodeInterface2[] result = FindInterface(codeNamespace.Members, names);
+
+                    list.AddRange(result);
+                }
+            }
+
+            return list.ToArray();
+        }        
+    }
+#>

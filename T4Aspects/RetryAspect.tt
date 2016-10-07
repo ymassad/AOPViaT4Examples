@@ -1,0 +1,124 @@
+﻿<#@ assembly name="EnvDTE" #>
+<#@ assembly name="EnvDTE80" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="EnvDTE" #>
+<#@ import namespace="EnvDTE80" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Linq" #>
+<#@ include once="true" file="Utilities\MethodParametersGenerator.tt" #><##>
+<#@ include once="true" file="Utilities\MethodMatcher.tt"#><##>
+<#+
+    public void GenerateRetryDecoratorForInterface(
+        CodeInterface2 @interface)
+    {
+        string fullInterfaceName = @interface.FullName;
+
+        var formatInterfaceName = FormatInterfaceName(@interface.Name);
+
+        string decoratorClassName = formatInterfaceName + "RetryDecorator";
+
+        var @namespace = @interface.Namespace.FullName;
+
+#>
+
+namespace <#= @namespace #>
+{
+    using System;
+    using System.Threading;
+
+    public class <#=decoratorClassName#> : <#=fullInterfaceName#>
+    {
+        private readonly <#=fullInterfaceName#> decorated;
+        private readonly int numberOfRetries;
+        private readonly TimeSpan waitTimeBetweenRetries;
+
+        public <#=decoratorClassName#>(
+            <#=fullInterfaceName#> decorated,
+            int numberOfRetries,
+            TimeSpan waitTimeBetweenRetries)
+        {
+            this.decorated = decorated;
+            this.numberOfRetries = numberOfRetries;
+            this.waitTimeBetweenRetries = waitTimeBetweenRetries;
+        }
+
+        <#+
+        PushIndent(new string(' ', 8));
+        GenerateMethodsForInterface(@interface);
+        PopIndent();
+        #>
+    }
+
+    public static class ExtensionMethodsForRetryAspectFor<#= formatInterfaceName#>
+    {
+        public static <#=fullInterfaceName#> ApplyRetryAspect(this <#=fullInterfaceName#> instance, int numberOfRetries, TimeSpan waitTimeBetweenRetries)
+        {
+            return new <#=decoratorClassName#>(instance, numberOfRetries, waitTimeBetweenRetries);
+        }
+    }
+}
+<#+
+    }
+
+    private string FormatInterfaceName(string name)
+    {
+        if (name.Length > 1 && name[0] == 'I' && char.IsUpper(name[1]))
+            return name.Substring(1);
+
+        return name;
+    }
+
+    private void GenerateMethodsForInterface(
+        CodeInterface @interface)
+    {
+        foreach (CodeFunction interfaceMethod in @interface.Members.OfType<CodeFunction>())
+        {
+            string methodReturnType =
+                interfaceMethod.Type.TypeKind == vsCMTypeRef.vsCMTypeRefVoid
+                    ? "void"
+                    : interfaceMethod.Type.AsFullName;
+
+            string methodName = interfaceMethod.Name;
+            bool isVoid = interfaceMethod.Type.TypeKind == vsCMTypeRef.vsCMTypeRefVoid;
+
+#>
+public <#=methodReturnType#> <#=methodName#>(<#= MethodParameterGenerator.GenerateMethodParametersWithTypes(interfaceMethod)#>)
+{
+    int retries = 0;
+
+    while(true)
+    {
+        try
+        {
+<#+
+			if (isVoid)
+			{
+#>
+			decorated.<#=methodName #>(<#=MethodParameterGenerator.GenerateMethodParametersWithoutTypes(interfaceMethod) #>);
+			return;
+<#+
+			}
+			else
+			{
+#>
+            return decorated.<#=methodName #>(<#=MethodParameterGenerator.GenerateMethodParametersWithoutTypes(interfaceMethod) #>);
+<#+
+			}
+#>
+        }
+        catch
+        {
+            retries++;
+
+            if(retries == numberOfRetries)
+                throw;
+
+            Thread.Sleep(waitTimeBetweenRetries);
+        }
+    }
+}
+
+<#+
+        }
+    }
+#>

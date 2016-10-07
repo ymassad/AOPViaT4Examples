@@ -1,0 +1,32 @@
+﻿<#@ assembly name="EnvDTE" #>
+<#@ assembly name="EnvDTE80" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="EnvDTE" #>
+<#@ import namespace="EnvDTE80" #>
+<#@ import namespace="System.Linq" #>
+<#@ include once="true" file="LoggingAspect.Core.tt"#><##>
+<#@ include once="true" file="Utilities\AttributeValueExtractor.tt"#><##>
+<#+
+    public class MethodDescriptionLoggingDataCodeGenerator : IPreInvocationLoggingDataCodeGenerator
+    {
+        public LoggingDataCode[] Extract(CodeFunction method)
+        {
+            var attribute =
+                method.Attributes
+                    .Cast<CodeAttribute2>()
+                    .FirstOrDefault(x => x.Target != "return" && x.FullName == "LoggingAOP.MethodDescriptionAttribute");
+
+            var methodDescription =
+                attribute == null
+                    ? method.Name
+                    : AttributeValueExtractor.GetAttributeSingleStringParameterValue(attribute);
+
+            return new []
+            {
+                new LoggingDataCode(
+                    nameCode: "\"Method\"",
+                    valueCode: "\"" + methodDescription + "\"")
+            };
+        }
+    }
+#>
