@@ -73,14 +73,15 @@ namespace <#= @namespace #>
     {
         foreach (CodeFunction interfaceMethod in @interface.Members.OfType<CodeFunction>())
         {
+            bool isVoid = interfaceMethod.Type.TypeKind == vsCMTypeRef.vsCMTypeRefVoid;
+
             string methodReturnType =
-                interfaceMethod.Type.TypeKind == vsCMTypeRef.vsCMTypeRefVoid
+                isVoid
                     ? "void"
                     : interfaceMethod.Type.AsFullName;
 
             string methodName = interfaceMethod.Name;
-            bool isVoid = interfaceMethod.Type.TypeKind == vsCMTypeRef.vsCMTypeRefVoid;
-
+            
 #>
 public <#=methodReturnType#> <#=methodName#>(<#= MethodParameterGenerator.GenerateMethodParametersWithTypes(interfaceMethod)#>)
 {
