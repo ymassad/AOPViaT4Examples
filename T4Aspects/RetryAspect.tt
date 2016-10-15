@@ -91,19 +91,19 @@ public <#=methodReturnType#> <#=methodName#>(<#= MethodParameterGenerator.Genera
         try
         {
 <#+
-			if (isVoid)
-			{
+            if (isVoid)
+            {
 #>
-			decorated.<#=methodName #>(<#=MethodParameterGenerator.GenerateMethodParametersWithoutTypes(interfaceMethod) #>);
-			return;
+            decorated.<#=methodName #>(<#=MethodParameterGenerator.GenerateMethodParametersWithoutTypes(interfaceMethod) #>);
+            return;
 <#+
-			}
-			else
-			{
+            }
+            else
+            {
 #>
             return decorated.<#=methodName #>(<#=MethodParameterGenerator.GenerateMethodParametersWithoutTypes(interfaceMethod) #>);
 <#+
-			}
+            }
 #>
         }
         catch
