@@ -13,9 +13,9 @@
     {
         string fullInterfaceName = @interface.FullName;
 
-        var formatInterfaceName = FormatInterfaceName(@interface.Name);
+        var formattedInterfaceName = FormatInterfaceName(@interface.Name);
 
-        string decoratorClassName = formatInterfaceName + "RetryDecorator";
+        string decoratorClassName = formattedInterfaceName + "RetryDecorator";
 
         var @namespace = @interface.Namespace.FullName;
 
@@ -49,7 +49,7 @@ namespace <#= @namespace #>
         #>
     }
 
-    public static class ExtensionMethodsForRetryAspectFor<#= formatInterfaceName#>
+    public static class ExtensionMethodsForRetryAspectFor<#= formattedInterfaceName#>
     {
         public static <#=fullInterfaceName#> ApplyRetryAspect(this <#=fullInterfaceName#> instance, int numberOfRetries, TimeSpan waitTimeBetweenRetries)
         {
